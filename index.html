@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="layui/src/css/layui.css">
+    <script src="layui/src/layui.js"></script>
+    <script src="chart.js/dist/Chart.js"></script>
+    <script src="axios/dist/axios.min.js"></script>
+    <style>
+      .layui-form-checkbox span{
+        width: 100px;
+        color: black;
+      }
+      .layui-form-item .layui-input-block{
+        margin-left: 20px;
+      }
+    </style>
+  </head>
+  <body class="layui-layout-body layui-bg-gray" style="height: 100vh;">
+    <div class="layui-row" style="height: 100vh;">
+      <div class="layui-col-md2 layui-bg-cyan" style="height: 100vh;">
+        <div class="layui-inline" style="padding: 8px;">
+          <form class="layui-form" action=""> 
+            <div class="layui-form-item">
+              <label class="layui-form-lable">选择指标</label>
+              <div class="layui-input-block" style="margin-left:20px;" id="main">
+                <input type="checkbox" name="attr" title="游离甲状腺素">
+                <input type="checkbox" name="attr2" title="促甲状腺素">
+              </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-lable">选择时间</label>
+                <input type="text" class="layui-input" id="query-time">
+            </div>
+            <div class="layui-form-item">
+              <div class="layui-input-block" style="display: flex; flex-direction: row;justify-content: center;margin-right: 20px;">
+                <button class="layui-btn" lay-submit lay-filter="formDemo">查询</button>
+                <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+              </div>
+            </div>
+          </form> 
+        </div>
+      </div>
+      <div class="layui-col-md10" style="height: 100vh;">
+        <div style="height: 40vh; margin-right: 20px;">
+          <canvas id="myChart" ></canvas>        
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // import Chart from 'chart.js'
+
+      layui.use(['form', 'laydate'], function(data){
+        var form = layui.form;
+        var laydate = layui.laydate;
+        var ctx = document.getElementById("myChart");
+
+
+        function getRandomColor(){
+          r = Math.floor(Math.random()*255);
+          g = Math.floor(Math.random()*255);
+          b = Math.floor(Math.random()*255);
+          color = 'rgba('+ r +','+ g +','+ b +',1)';
+          return color;
+        }
+
+        function getRandomData(){
+          var count = Math.floor(Math.random()*20) + 1;
+          var num = Math.floor(Math.random()*5) + 1;
+          res = {
+            labels:[],
+            datasets:[]
+          }
+          for(var i=0 ;i<num ;i++){
+            data = {
+              label:Math.random(),
+              data:[],
+              borderColor: getRandomColor(),
+              pointBackgroundColor: getRandomColor(),
+              backgroundColor:"rgba(0, 0, 0 ,0)",
+              pointRadius: 5,
+              yAxisID:"axis1"
+            };
+            for(var j=0; j<count; j++){
+              data.data[j] = 150*Math.random();
+            }
+            res.datasets[i] = data;
+          }
+          for(var i=0; i<count; i++){
+            res.labels[i] = Math.random();
+          }
+          return res;
+        }
+
+        var startTime = undefined;
+        var endTime = undefined;
+        var chartData = {
+          type: 'line',
+          data: {
+              labels: [],
+              datasets: []
+          },
+          options: {
+              scales: {
+                  yAxes: [{
+                    id: 'axis1',
+                    type: 'linear',
+                    position: 'left',
+                    ticks: {
+                      beginAtZero:true
+                    }
+                  }]
+              }
+          }
+        }
+
+        form.on('submit(formDemo)', function(data){
+          console.log(data)
+          console.log(startTime);
+          console.log(endTime);
+          layer.msg(JSON.stringify(data.field));
+          // 模拟获取数据
+          setTimeout(function(){
+            var data = getRandomData();
+            console.log(data);
+            chartData.data.labels = data.labels;
+            chartData.data.datasets = data.datasets;
+            var myChart = new Chart(ctx, chartData);
+          }, 1000)
+          
+          return false;
+        });
+
+        laydate.render({
+          elem:"#query-time",
+          type:"month",
+          range:"-",
+          done:function(value, date, endDate){
+            startTime = new Date(date.year + "-" + date.month + "-" + '1');
+            endTime = new Date(endDate.year + "-" + endDate.month + "-" + laydate.getEndDate(endDate.month, endDate.year));
+          } 
+        });
+
+      })
+
+    </script>
+  </body>
+
+</html>
