@@ -3,9 +3,11 @@
   <head>
     <meta charset="utf-8">
     <link rel="stylesheet" href="layui/src/css/layui.css">
+    <script src="https://cdn.staticfile.org/jquery/1.10.2/jquery.min.js"></script>
     <script src="layui/src/layui.js"></script>
     <script src="chart.js/dist/Chart.js"></script>
     <script src="axios/dist/axios.min.js"></script>
+    <script src="js/init.js"></script>
     <style>
       .layui-form-checkbox span{
         width: 100px;
@@ -23,9 +25,15 @@
           <form class="layui-form" action=""> 
             <div class="layui-form-item">
               <label class="layui-form-lable">选择指标</label>
-              <div class="layui-input-block" style="margin-left:20px;" id="main">
-                <input type="checkbox" name="attr" title="游离甲状腺素">
-                <input type="checkbox" name="attr2" title="促甲状腺素">
+              <div class="layui-input-block" style="margin-left:20px;" id="attributeContainer">
+                <script id="attribute" type="text/html">
+                  {{#  layui.each(d.list, function(index, item){ }}
+                    <input type="checkbox" name="{{item.id}}" title="{{item.name}}">
+                  {{#  }); }}
+                  {{#  if(d.length === 0){ }}
+                    无数据
+                  {{#  } }} 
+                </script>
               </div>
             </div>
             <div class="layui-form-item">
@@ -34,7 +42,7 @@
             </div>
             <div class="layui-form-item">
               <div class="layui-input-block" style="display: flex; flex-direction: row;justify-content: center;margin-right: 20px;">
-                <button class="layui-btn" lay-submit lay-filter="formDemo">查询</button>
+                <button id="submitBtn" class="layui-btn" lay-submit lay-filter="formDemo">查询</button>
                 <button type="reset" class="layui-btn layui-btn-primary">重置</button>
               </div>
             </div>
@@ -49,13 +57,29 @@
     </div>
 
     <script>
-      // import Chart from 'chart.js'
-
-      layui.use(['form', 'laydate'], function(data){
+      layui.use(['form', 'laydate', 'laytpl'], function(data){
         var form = layui.form;
         var laydate = layui.laydate;
+        var laytpl = layui.laytpl
+        // var element = layui.element;
         var ctx = document.getElementById("myChart");
 
+        axios.get('http://localhost:8000/attribute')
+          .then(function (response) {
+            attributes = response.data;
+            container = document.getElementById("attributeContainer")
+            getTpl = attribute.innerHTML
+            var data = {list:attributes}
+            console.log(data);
+            laytpl(getTpl).render(data, function(html){
+              console.log(html)
+              container.innerHTML = html;
+              form.render()
+            });
+          })
+          .catch(function (error) {
+            console.log(error);
+          });
 
         function getRandomColor(){
           r = Math.floor(Math.random()*255);
@@ -93,8 +117,8 @@
           return res;
         }
 
-        var startTime = undefined;
-        var endTime = undefined;
+        var startTime = null;
+        var endTime = null;
         var chartData = {
           type: 'line',
           data: {
@@ -116,19 +140,55 @@
         }
 
         form.on('submit(formDemo)', function(data){
-          console.log(data)
-          console.log(startTime);
-          console.log(endTime);
-          layer.msg(JSON.stringify(data.field));
-          // 模拟获取数据
-          setTimeout(function(){
-            var data = getRandomData();
-            console.log(data);
-            chartData.data.labels = data.labels;
-            chartData.data.datasets = data.datasets;
-            var myChart = new Chart(ctx, chartData);
-          }, 1000)
-          
+          var attribute = new Array();
+          for (var index in data.field) {
+            attribute[attribute.length] = Number.parseInt(index);
+          }
+          if(attribute.length === 0){
+            layer.msg("请选择指标")
+            return false;
+          }
+          if(startTime === null){
+            layer.msg("请选择开始时间")
+            return false;
+
+          }
+          if(endTime === null){
+            layer.msg("请选择结束时间")
+            return false;
+          }
+          var msg = layer.load(2)
+          var params = new URLSearchParams();
+          //你要传给后台的参数值 key/value
+          params.append('attributeIds',attribute);       
+          params.append('startTime', startTime);
+          params.append('endTime', endTime);
+  
+          axios.post("http://localhost:8000/sign", params)
+            .then(function (res){
+              var data = res.data
+              console.log(data);
+              for(var i=0; i<data.dataSets.length; i++){
+                var attribute  = {}
+                attribute.label = data.dataSets[i].name;
+                attribute.data = data.dataSets[i].values;
+                attribute.borderColor = getRandomColor();
+                attribute.pointBackgroundColor = getRandomColor();
+                attribute.backgroundColor = getRandomColor();
+                attribute.pointRadius = 10;
+                attribute.yAxisID = "axis1";
+                data.dataSets[i] = attribute;
+              }
+              chartData.data.labels = data.labels;
+              chartData.data.datasets = data.dataSets;
+              var myChart = new Chart(ctx, chartData);
+              setTimeout(function(){
+                layer.close(msg);
+              }, 1000)
+            })
+            .catch(function(res){
+
+            })
           return false;
         });
 
@@ -138,12 +198,11 @@
           range:"-",
           done:function(value, date, endDate){
             startTime = new Date(date.year + "-" + date.month + "-" + '1');
-            endTime = new Date(endDate.year + "-" + endDate.month + "-" + laydate.getEndDate(endDate.month, endDate.year));
+            endTime = new Date(endDate.year + "-" + endDate.month + "-" + (laydate.getEndDate(endDate.month, endDate.year)+1));
           } 
         });
-
       })
-
+      
     </script>
   </body>
 
